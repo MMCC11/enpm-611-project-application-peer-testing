@@ -7,6 +7,54 @@ To view the coverage results use the following:
 python -m coverage report --omit=test*
 The results of our testing produced 94% overall coverage
 Stretching over 589 statements and only having 34 misses
+
+Test Descriptions
+Each test file corresponds to a specific analysis module or feature. Below are the descriptions of the tests included:
+
+1. Event Label Categories Analysis (tests/test_event_label_categories_analysis.py)
+Validates the behavior of label-based event analysis.
+Tests Include:
+Running analysis without a label.
+Running with empty issues data.
+Handling cases with no events for a given label.
+Validating proper aggregation and output for specific labels.
+2. Example Analysis (tests/test_example_analysis.py)
+Provides basic examples of analysis to ensure utility functions operate as expected.
+Tests Include:
+Handling empty issue data.
+Correct graph generation for top issue creators.
+Validating edge cases like missing dates and large data sets.
+3. Issue Analysis (tests/test_issue_analysis.py)
+Focuses on time to assign users to issues.
+Tests Include:
+Handling empty data loaders.
+Analyzing issues without user assignment.
+Validating graphs for label-specific time distribution.
+4. Label Trend Analysis (tests/test_label_trend_analysis.py)
+Examines label usage trends over time.
+Tests Include:
+Generating trends for the top 5 labels.
+Handling missing dates and invalid date formats.
+Ensuring functionality for fewer than 5 labels.
+5. Reopened Issue Analysis (tests/test_reopened_issue_analysis.py)
+Explores characteristics of reopened issues.
+Tests Include:
+Counting reopened issues.
+Validating insights for labels on reopened issues.
+Handling large datasets and edge cases like fewer than 5 labels.
+6. Time-Based Issue Analysis (tests/test_time_based_issue_analysis.py)
+Analyzes the time taken to close issues.
+Tests Include:
+Creating DataFrames for closed issues.
+Graphing issue resolution times.
+User-specific analysis with filters.
+7. User-Specific Issue Analysis (tests/test_user_specific_issue_analysis.py)
+Examines a user's interactions with issues.
+Tests Include:
+Counting user-created issues, comments, and labels.
+Validating behavior for invalid or missing events.
+Ensuring accurate visualizations for user-specific data.
+
 # ENPM611 Project Application Template
 
 This is the template for the ENPM611 class project. Use this template in conjunction with the provided data to implement an application that analyzes GitHub issues for the [poetry](https://github.com/python-poetry/poetry/issues) Open Source project and generates interesting insights.
