@@ -16,9 +16,15 @@ class TestTimeBasedIssueAnalysis(unittest.TestCase):
                 "creator": "user1",
                 "labels": ["bug"],
                 "state": "closed",
-                "created_date": datetime(2024, 1, 1),
+                "closed_time": "",
+                "created_date": "2024-10-12T13:13:00+00:00",
                 "events": [
-                    {"event_type": "closed", "author": "user2", "event_date": datetime(2024, 1, 5)}
+                    {
+                        "event_type": "closed",
+                        "author": "bram-tv",
+                        "event_date": "2024-10-12T13:13:00+00:00",
+                        "label": "kind/bug"
+                    }
                 ]
             }),
             Issue({
@@ -26,9 +32,14 @@ class TestTimeBasedIssueAnalysis(unittest.TestCase):
                 "creator": "user2",
                 "labels": ["enhancement"],
                 "state": "closed",
-                "created_date": datetime(2024, 1, 10),
+                "created_date": "2024-12-12T13:13:00+00:00",
                 "events": [
-                    {"event_type": "closed", "author": "user3", "event_date": datetime(2024, 1, 20)}
+                    {
+                        "event_type": "closed",
+                        "author": "bram-tv",
+                        "event_date": "2024-10-12T13:13:00+00:00",
+                        "label": "kind/bug"
+                    }
                 ]
             }),
             Issue({
@@ -36,7 +47,7 @@ class TestTimeBasedIssueAnalysis(unittest.TestCase):
                 "creator": "user3",
                 "labels": ["documentation"],
                 "state": "open",
-                "created_date": datetime(2024, 1, 15),
+                "created_date": "2024-10-12T10:13:00+00:00",
                 "events": []
             }),
         ]
