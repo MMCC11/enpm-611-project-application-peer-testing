@@ -1,106 +1,171 @@
 import unittest
-from unittest.mock import patch, MagicMock
-from datetime import datetime
-from reopened_issue_analysis import ReopenedIssueAnalysis
-from models.model import Issue
+from unittest.mock import MagicMock, patch
+from datetime import datetime, timedelta
+import pandas as pd
+from analysis.time_based_issue_analysis import TimeBasedIssueAnalysis
+from models.model import Issue, Event
 
 
-class TestReopenedIssueAnalysis(unittest.TestCase):
-    @patch("reopened_issue_analysis.DataLoader.get_issues")
-    def test_less_than_five_labels(self, mock_get_issues):
-        """
-        Test plot_reopened_issues with fewer than 5 labels.
-        """
-        # Mocking issues with fewer than 5 unique labels
-        mock_issues = [
+class TestTimeBasedIssueAnalysis(unittest.TestCase):
+    def setUp(self):
+        """Set up mock data for testing."""
+        # Mock data for closed and open issues
+        self.mock_issues = [
             Issue({
                 "number": 1,
                 "creator": "user1",
                 "labels": ["bug"],
+                "state": "closed",
                 "created_date": datetime(2024, 1, 1),
                 "events": [
-                    {"event_type": "closed", "author": "user1", "event_date": datetime(2024, 1, 10)}
+                    {"event_type": "closed", "author": "user2", "event_date": datetime(2024, 1, 5)}
                 ]
             }),
             Issue({
                 "number": 2,
                 "creator": "user2",
                 "labels": ["enhancement"],
-                "created_date": datetime(2024, 2, 1),
+                "state": "closed",
+                "created_date": datetime(2024, 1, 10),
                 "events": [
-                    {"event_type": "closed", "author": "user2", "event_date": datetime(2024, 2, 10)}
-                ]
-            }),
-        ]
-        mock_get_issues.return_value = mock_issues
-
-        # Run analysis
-        analysis = ReopenedIssueAnalysis()
-
-        # Ensure no IndexError is raised
-        try:
-            analysis.run()
-        except IndexError as e:
-            self.fail(f"Unexpected IndexError: {e}")
-
-    @patch("reopened_issue_analysis.DataLoader.get_issues")
-    def test_reopened_issue_analysis_empty_data_loader(self, mock_get_issues):
-        """
-        Test the handling of an empty dataset.
-        """
-        mock_get_issues.return_value = []  # No issues
-
-        analysis = ReopenedIssueAnalysis()
-
-        # Ensure the method runs without raising errors
-        try:
-            analysis.run()
-        except IndexError as e:
-            self.fail(f"Unexpected IndexError: {e}")
-
-    @patch("reopened_issue_analysis.DataLoader.get_issues")
-    def test_reopened_issue_analysis_output(self, mock_get_issues):
-        """
-        Test plotting logic with a normal dataset.
-        """
-        mock_issues = [
-            Issue({
-                "number": 1,
-                "creator": "user1",
-                "labels": ["bug"],
-                "created_date": datetime(2024, 1, 1),
-                "events": [
-                    {"event_type": "closed", "author": "user1", "event_date": datetime(2024, 1, 10)}
-                ]
-            }),
-            Issue({
-                "number": 2,
-                "creator": "user2",
-                "labels": ["enhancement"],
-                "created_date": datetime(2024, 2, 1),
-                "events": [
-                    {"event_type": "closed", "author": "user2", "event_date": datetime(2024, 2, 10)}
+                    {"event_type": "closed", "author": "user3", "event_date": datetime(2024, 1, 20)}
                 ]
             }),
             Issue({
                 "number": 3,
                 "creator": "user3",
                 "labels": ["documentation"],
-                "created_date": datetime(2023, 11, 15),
+                "state": "open",
+                "created_date": datetime(2024, 1, 15),
+                "events": []
+            }),
+        ]
+        self.empty_issues = []
+
+    @patch("data.data_loader.DataLoader.get_issues")
+    def test_run_with_closed_issues(self, mock_get_issues):
+        """Test the `run` method with closed issues."""
+        mock_get_issues.return_value = self.mock_issues
+        analysis = TimeBasedIssueAnalysis()
+        
+        with patch.object(analysis, "analyse_closed_issues") as mock_analyse_closed, \
+             patch.object(analysis, "analyse_based_on_user") as mock_analyse_user:
+            analysis.run()
+            # Assert that methods are called
+            mock_analyse_closed.assert_called_once()
+            mock_analyse_user.assert_not_called()
+
+    @patch("data.data_loader.DataLoader.get_issues")
+    def test_run_with_user_filter(self, mock_get_issues):
+        """Test the `run` method with a specific user filter."""
+        mock_get_issues.return_value = self.mock_issues
+        with patch("config.get_parameter", return_value="user1"), \
+             patch.object(TimeBasedIssueAnalysis, "analyse_based_on_user") as mock_analyse_user:
+            analysis = TimeBasedIssueAnalysis()
+            analysis.run()
+            mock_analyse_user.assert_called_once()
+
+    def test_create_dataframe(self):
+        """Test the creation of a DataFrame from closed issues."""
+        analysis = TimeBasedIssueAnalysis()
+        closed_issues = [self.mock_issues[0], self.mock_issues[1]]
+        df = analysis.create_dataframe(closed_issues)
+
+        # Assert the DataFrame has the expected structure
+        self.assertEqual(len(df), 2)
+        self.assertIn("issue_id", df.columns)
+        self.assertIn("creator", df.columns)
+        self.assertIn("labels", df.columns)
+        self.assertIn("time_diff_in_days", df.columns)
+
+        # Assert time difference calculation is correct
+        self.assertEqual(df.iloc[0]["time_diff_in_days"], 4)  # Difference between Jan 1 and Jan 5
+
+    def test_empty_dataframe(self):
+        """Test handling of an empty list of closed issues."""
+        analysis = TimeBasedIssueAnalysis()
+        df = analysis.create_dataframe(self.empty_issues)
+
+        # Assert the DataFrame is empty
+        self.assertTrue(df.empty)
+
+    def test_analyse_closed_issues(self):
+        """Test the analysis of closed issues."""
+        analysis = TimeBasedIssueAnalysis()
+        closed_issues = [self.mock_issues[0], self.mock_issues[1]]
+        df = analysis.create_dataframe(closed_issues)
+
+        with patch("plotly.express.bar") as mock_bar:
+            analysis.analyse_closed_issues(df)
+
+            # Ensure a plot is created
+            mock_bar.assert_called()
+
+    def test_analyse_closed_issues_with_duplicates(self):
+        """Test analysis when there are duplicate creators."""
+        analysis = TimeBasedIssueAnalysis()
+        closed_issues = [
+            Issue({
+                "number": 1,
+                "creator": "user1",
+                "labels": ["bug"],
+                "state": "closed",
+                "created_date": datetime(2024, 1, 1),
                 "events": [
-                    {"event_type": "closed", "author": "user3", "event_date": datetime(2023, 12, 15)}
+                    {"event_type": "closed", "author": "user2", "event_date": datetime(2024, 1, 5)}
+                ]
+            }),
+            Issue({
+                "number": 2,
+                "creator": "user1",
+                "labels": ["enhancement"],
+                "state": "closed",
+                "created_date": datetime(2024, 1, 10),
+                "events": [
+                    {"event_type": "closed", "author": "user3", "event_date": datetime(2024, 1, 20)}
                 ]
             }),
         ]
-        mock_get_issues.return_value = mock_issues
+        df = analysis.create_dataframe(closed_issues)
 
-        analysis = ReopenedIssueAnalysis()
+        with patch("plotly.express.bar") as mock_bar:
+            analysis.analyse_closed_issues(df)
 
-        # Run and validate that no IndexError occurs
-        try:
-            analysis.run()
-        except IndexError as e:
-            self.fail(f"Unexpected IndexError: {e}")
+            # Check if duplicates are handled correctly
+            self.assertFalse(df.duplicated(subset=["creator"]).any())
+
+    def test_get_approx_months(self):
+        """Test the conversion of days to approximate months."""
+        analysis = TimeBasedIssueAnalysis()
+        days = 90  # 3 months
+        months = analysis.get_approx_months(days)
+        self.assertEqual(months, 3)
+
+    def test_analyse_based_on_user(self):
+        """Test user-specific analysis."""
+        analysis = TimeBasedIssueAnalysis()
+        closed_issues = [self.mock_issues[0], self.mock_issues[1]]
+        df = analysis.create_dataframe(closed_issues)
+
+        with patch("plotly.express.bar") as mock_bar:
+            analysis.analyse_based_on_user("user1", df)
+
+            # Ensure the plot is created only for the specific user
+            mock_bar.assert_called()
+            user_df = df[df["creator"] == "user1"]
+            self.assertEqual(len(user_df), 1)
+
+    def test_analyse_based_on_user_no_data(self):
+        """Test user-specific analysis with no matching data."""
+        analysis = TimeBasedIssueAnalysis()
+        closed_issues = [self.mock_issues[0], self.mock_issues[1]]
+        df = analysis.create_dataframe(closed_issues)
+
+        with patch("plotly.express.bar") as mock_bar:
+            analysis.analyse_based_on_user("nonexistent_user", df)
+
+            # Ensure no plot is created for non-existent user
+            mock_bar.assert_not_called()
 
 
 if __name__ == "__main__":
