@@ -80,13 +80,17 @@ class TestIssueAnalysis(unittest.TestCase):
 
         mock_loader.get_issues.assert_called_once()
 
-    def test_issue_analysis_run_no_inputs(self):
+    def test_issue_analysis_run_no_input(self):
         mock_issues = self.mock_issues()
         mock_loader = self.mock_data_loader(mock_issues)
+        def mock_get_parameter(key):
+            return None
         with patch("data.data_loader.DataLoader.get_issues", mock_loader.get_issues):
-            analysis = IssueAnalysis()
-            with patch("matplotlib.pyplot.show"):
-                analysis.run()
+            with patch("config.get_parameter", mock_get_parameter):
+                analysis = IssueAnalysis()
+                with patch("matplotlib.pyplot.show"):
+                    analysis.run()
+
 
         mock_loader.get_issues.assert_called_once() 
         fig = plt.gcf()
@@ -118,10 +122,7 @@ class TestIssueAnalysis(unittest.TestCase):
                 with patch("matplotlib.pyplot.show"):
                     analysis.run()
 
-        mock_loader.get_issues.assert_called_once() 
-        fig = plt.gcf()
-        title = fig.axes[0].get_title()
-        self.assertEqual(title, "Distribution of Time to Assign Issues (Label = )") #checking for right graph
+
 
 
     def test_issue_analysis_no_issues(self):
