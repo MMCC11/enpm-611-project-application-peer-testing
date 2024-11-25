@@ -1,3 +1,12 @@
+#This repo tests the analysis files from the forked repo \
+-The "test" branch is our final branch which contains all of the test files.
+### Running the test
+Use:
+python -m coverage run -m unittest discover
+To view the coverage results use the following:
+python -m coverage report --omit=test*
+The results of our testing produced 94% overall coverage
+Stretching over 589 statements and only having 34 misses
 # ENPM611 Project Application Template
 
 This is the template for the ENPM611 class project. Use this template in conjunction with the provided data to implement an application that analyzes GitHub issues for the [poetry](https://github.com/python-poetry/poetry/issues) Open Source project and generates interesting insights.
